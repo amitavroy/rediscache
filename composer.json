@@ -1,0 +1,31 @@
+{
+    "name": "amitavroy/rediscache",
+    "description": "A Redis Cache package handling basic caching requirements through pipelines and allowing handling wildcard cache clears",
+    "type": "library",
+    "require": {
+        "predis/predis": "^1.1",
+        "illuminate/support": "^5.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "AmitavRoy\\RedisCache\\": "src"
+        }
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Amitav Roy",
+            "email": "reachme@amitavroy.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "AmitavRoy\\RedisCache\\RedisCacheServiceProvider"
+            ],
+            "aliases": {
+                "RedisCache": "AmitavRoy\\RedisCache\\Facades\\RedisCacheFacade"
+            }
+        }
+    }
+}
