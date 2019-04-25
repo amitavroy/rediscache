@@ -14,17 +14,27 @@ class RedisCacheFactory
     public function __construct()
     {
         $connections = config('rediscache.connections');
+
         $this->redis = new Client($connections[0]);
     }
 
     public function get($key)
     {
-        return $this->redis->pipeline()->get($key)->execute();
+        $data = $this->redis
+            ->pipeline()
+            ->get($key)
+            ->execute();
+
+        return json_decode($data[0]);
     }
 
     public function set($key, $value)
     {
-        return $this->redis->pipeline()->set($key, $value)->execute();
+        $value = json_encode($value);
+
+        $this->redis->pipeline()->set($key, $value)->execute();
+
+        return $this->get($key);
     }
 
     public function getAll($key)
@@ -32,9 +42,10 @@ class RedisCacheFactory
         $keys = $this->redis->executeRaw(["KEYS", "{$key}*"]);
 
         $data = collect();
+
         foreach ($keys as $key) {
             $data->push([
-                $key => $this->get($key)[0]
+                $key => $this->get($key)
             ]);
         }
 
@@ -52,13 +63,24 @@ class RedisCacheFactory
 
     private function clearSingle($key)
     {
-        return $this->redis->pipeline()->del($key)->execute();
+        return $this->redis
+            ->pipeline()
+            ->del($key)
+            ->execute();
     }
 
     private function clearWildCard($key)
     {
-        $keys = $this->redis->executeRaw(["KEYS", "{$key}*"]);
+        $keys = $this->redis
+            ->executeRaw(["KEYS", "{$key}*"]);
 
-        return $this->redis->pipeline()->del($keys)->execute();
+        if (count($keys) == 0) {
+            return false;
+        }
+
+        return $this->redis
+            ->pipeline()
+            ->del($keys)
+            ->execute();
     }
 }
