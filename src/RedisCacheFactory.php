@@ -2,6 +2,7 @@
 
 namespace AmitavRoy\RedisCache;
 
+use Illuminate\Support\Collection;
 use Predis\Client;
 
 class RedisCacheFactory
@@ -18,6 +19,12 @@ class RedisCacheFactory
         $this->redis = new Client($connections[0]);
     }
 
+    /**
+     * This function is called through the Facades to retrive
+     * data from the redis cache store. It internally uses
+     * the pipeline mechanism to optimise the query to
+     * redis and converts the data to send it back.
+     */
     public function get($key)
     {
         $data = $this->redis
@@ -25,12 +32,34 @@ class RedisCacheFactory
             ->get($key)
             ->execute();
 
-        return json_decode($data[0]);
+        $data = json_decode($data[0], true);
+
+        /**
+         * While setting the cache, if data was a collection
+         * then we would like to return a collection when
+         * we are passing it back from cache.
+         */
+        if (isset($data['collection']) && $data['collection'] == true) {
+            $cacheData = collect($data['data']);
+        } else {
+            $cacheData = $data['data'];
+        }
+
+        return $cacheData;
     }
 
     public function set($key, $value)
     {
-        $value = json_encode($value);
+        $data = [
+            'collection' => false,
+            'data' => $value,
+        ];
+
+        if ($value instanceof Collection) {
+            $data['collection'] = true;
+        }
+
+        $value = json_encode($data);
 
         $this->redis->pipeline()->set($key, $value)->execute();
 
@@ -45,7 +74,7 @@ class RedisCacheFactory
 
         foreach ($keys as $key) {
             $data->push([
-                $key => $this->get($key)
+                $key => $this->get($key),
             ]);
         }
 
